@@ -256,7 +256,7 @@
     <div class="setup-card">
       <div class="group-label">학년</div>
       <div class="lengths" id="gradePicker">
-        <button data-grade="1" class="active">1학년 (80자)</button>
+        <button data-grade="1">1학년 (80자)</button>
         <button data-grade="2">2학년 (160자)</button>
         <button data-grade="3">3학년 (200자)</button>
         <button data-grade="4">4학년 (202자)</button>
@@ -264,7 +264,7 @@
         <button data-grade="6">6학년 (191자)</button>
         <button data-grade="8">초급 (1026자)</button>
         <button data-grade="7">중고급 (1110자)</button>
-        <button data-grade="0">전체 랜덤 (2136자)</button>
+        <button data-grade="0" class="active">전체 랜덤 (2136자)</button>
       </div>
 
       <div class="group-label">구간</div>
@@ -2529,7 +2529,7 @@ const GRADES = {
 
 let difficulty = 'normal';
 
-let currentGrade = 1;
+let currentGrade = 0;
 let ROUND = [];
 let idx = 0;
 let missCount = 0;
@@ -2564,19 +2564,20 @@ const resultScreen = el('resultScreen');
   }
 })();
 
-function renderLengthPicker(){
+function renderLengthPicker(preferredLen){
   const g = GRADES[currentGrade];
   const wrap = el('lengthPicker');
   wrap.innerHTML = '';
   wrap.classList.toggle('lengths-grid3', g.lens.length === 6);
+  const useLen = (preferredLen !== undefined && g.lens.includes(preferredLen)) ? preferredLen : g.lens[g.lens.length-1];
   g.lens.forEach((len,i)=>{
     const b = document.createElement('button');
     b.textContent = (len===g.data.length ? '전체 '+len : len+'문항');
     b.dataset.len = len;
-    if(i===g.lens.length-1) b.classList.add('active');
+    if(len === useLen) b.classList.add('active');
     wrap.appendChild(b);
   });
-  currentLen = g.lens[g.lens.length-1];
+  currentLen = useLen;
 }
 
 el('gradePicker').addEventListener('click', (e)=>{
@@ -2604,7 +2605,7 @@ el('difficultyPicker').addEventListener('click', (e)=>{
   difficulty = b.dataset.diff;
 });
 
-renderLengthPicker();
+renderLengthPicker(50);
 
 const FOOTER_DEFAULT = '한자 타이핑 v1.3 · Made by filmlet · 오류 및 버그 제보 <a href="https://open.kakao.com/o/sTsfcmHi" target="_blank" rel="noopener">https://open.kakao.com/o/sTsfcmHi</a>';
 
