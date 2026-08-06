@@ -2673,6 +2673,26 @@ function getDailyId(d){
   return `${y}-${m}-${day}`;
 }
 
+// 전체 2136자를 한 번만 고정 셔플해서 순환시키는 방식 (매일 20자씩, 겹침 없이 순서대로 소진 후 다시 처음부터)
+const DAILY_CHUNK = 20;
+const DAILY_ROTATION = seededShuffle(ALL_DATA, hashStr('daily-rotation-fixed-v1'));
+const DAILY_ROTATION_EPOCH = new Date(2026, 0, 1); // 고정 기준일 (바꾸면 순환 순서가 밀림, 되도록 유지)
+
+function getDailyRound(dayId){
+  const [y, m, d] = dayId.split('-').map(Number);
+  const thisDate = new Date(y, m - 1, d);
+  const daysSince = Math.floor((thisDate - DAILY_ROTATION_EPOCH) / (24 * 3600 * 1000));
+  const total = DAILY_ROTATION.length;
+  const numSlots = Math.ceil(total / DAILY_CHUNK);
+  const slot = ((daysSince % numSlots) + numSlots) % numSlots; // 음수 방지
+  const start = slot * DAILY_CHUNK;
+  const round = [];
+  for(let i = 0; i < DAILY_CHUNK; i++){
+    round.push(DAILY_ROTATION[(start + i) % total]);
+  }
+  return round;
+}
+
 function startGame(){
   weeklyMode = null;
   const g = GRADES[currentGrade];
@@ -2683,8 +2703,7 @@ function startWeeklyChallenge(){
   const dayId = getDailyId();
   weeklyMode = dayId;
   difficulty = 'normal';
-  const seed = hashStr('daily-' + dayId);
-  beginRound(seededShuffle(ALL_DATA, seed).slice(0, 20), '일일 챌린지', 'normal');
+  beginRound(getDailyRound(dayId), '일일 챌린지', 'normal');
 }
 
 function beginRound(round, label, diff){
