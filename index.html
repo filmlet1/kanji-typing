@@ -243,12 +243,12 @@
 
     <div class="weekly-card">
       <div class="weekly-card-head">
-        <span class="weekly-badge">이번주 도전</span>
-        <span class="weekly-sub" id="weeklySub">전체 2136자 중 랜덤 20문항 · 보통 난이도 · 매주 월요일 0시 초기화</span>
+        <span class="weekly-badge">일일 챌린지</span>
+        <span class="weekly-sub" id="weeklySub">전체 2136자 중 랜덤 20문항 · 보통 난이도 · 매일 오전 9시 초기화</span>
       </div>
-      <button class="primary go weekly-go" id="weeklyStartBtn">이번주 도전 시작 →</button>
+      <button class="primary go weekly-go" id="weeklyStartBtn">일일 챌린지 시작 →</button>
       <div class="bestlist weekly-bestlist">
-        <div class="title" id="weeklyBestTitle">이번주 랭킹 · TOP 10</div>
+        <div class="title" id="weeklyBestTitle">일일 랭킹 · TOP 10</div>
         <div id="weeklyBestRows"><div class="row"><span>불러오는 중...</span></div></div>
       </div>
     </div>
@@ -2637,7 +2637,7 @@ function diffLabel(d){
   return d === 'easy' ? '쉬움' : d === 'hard' ? '어려움' : '보통';
 }
 
-let weeklyMode = null; // null이면 일반 모드, 문자열(주차 id)이면 이번주 도전 모드
+let weeklyMode = null; // null이면 일반 모드, 문자열(날짜 id)이면 일일 챌린지 모드
 
 function hashStr(s){
   let h = 1779033703 ^ s.length;
@@ -2664,16 +2664,13 @@ function seededShuffle(arr, seed){
   }
   return a;
 }
-function getWeekId(d){
+function getDailyId(d){
   d = d || new Date();
-  const date = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const dayNum = (date.getDay() + 6) % 7; // 월=0 ... 일=6
-  date.setDate(date.getDate() - dayNum + 3);
-  const firstThursday = new Date(date.getFullYear(), 0, 4);
-  const firstDayNum = (firstThursday.getDay() + 6) % 7;
-  firstThursday.setDate(firstThursday.getDate() - firstDayNum + 3);
-  const weekNum = 1 + Math.round((date - firstThursday) / (7*24*3600*1000));
-  return date.getFullYear() + '-W' + String(weekNum).padStart(2,'0');
+  const shifted = new Date(d.getTime() - 9*3600*1000); // 오전 9시를 하루의 경계로 삼음
+  const y = shifted.getFullYear();
+  const m = String(shifted.getMonth()+1).padStart(2,'0');
+  const day = String(shifted.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
 }
 
 function startGame(){
@@ -2683,11 +2680,11 @@ function startGame(){
 }
 
 function startWeeklyChallenge(){
-  const weekId = getWeekId();
-  weeklyMode = weekId;
+  const dayId = getDailyId();
+  weeklyMode = dayId;
   difficulty = 'normal';
-  const seed = hashStr('weekly-' + weekId);
-  beginRound(seededShuffle(ALL_DATA, seed).slice(0, 20), '이번주 도전', 'normal');
+  const seed = hashStr('daily-' + dayId);
+  beginRound(seededShuffle(ALL_DATA, seed).slice(0, 20), '일일 챌린지', 'normal');
 }
 
 function beginRound(round, label, diff){
@@ -2700,7 +2697,7 @@ function beginRound(round, label, diff){
   el('statTotal').textContent = ROUND.length;
   el('lineSub').textContent = label + ' · ' + diffLabel(diff) + ' · 음독 + 훈독 완주';
   el('footerNote').textContent = weeklyMode
-    ? ('이번주 도전 · ' + weeklyMode + ' · 전 세계 동일 문제')
+    ? ('일일 챌린지 · ' + weeklyMode)
     : ('教育漢字 ' + label + ' ' + ROUND.length + '자 · CSV 기준 통일 표기');
   buildTrack();
   renderStation();
@@ -2939,7 +2936,7 @@ async function finishGame(){
   el('resReveal').textContent = revealCount;
   const g = GRADES[currentGrade];
   el('bestTitle').textContent = weeklyMode
-    ? ('이번주 도전 · ' + weeklyMode + ' · TOP 10')
+    ? ('일일 챌린지 · ' + weeklyMode + ' · TOP 10')
     : ('개인 기록 · ' + g.label + ' ' + ROUND.length + '문항 · ' + diffLabel(difficulty));
 
   lastRunStats = { totalSec, acc, missCount, revealCount, roundLength: ROUND.length };
@@ -2992,7 +2989,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// 카테고리 키 계산 (일반 모드 vs 이번주 도전 모드 분리)
+// 카테고리 키 계산 (일반 모드 vs 일일 챌린지 모드 분리)
 function categoryKeyFor(len){
   if(weeklyMode) return `weekly_${weeklyMode}`;
   const g = GRADES[currentGrade];
@@ -3069,11 +3066,11 @@ el('gradePicker').addEventListener('click', loadStartLeaderboard);
 el('lengthPicker').addEventListener('click', loadStartLeaderboard);
 el('difficultyPicker').addEventListener('click', loadStartLeaderboard);
 
-// 5. 이번주 도전 랭킹 미리보기 (시작 화면 카드)
+// 5. 일일 챌린지 랭킹 미리보기 (시작 화면 카드)
 function loadWeeklyLeaderboard(){
-  const weekId = getWeekId();
-  el('weeklyBestTitle').textContent = '이번주 랭킹 (' + weekId + ') · TOP 10';
-  database.ref(`leaderboards/weekly_${weekId}`)
+  const dayId = getDailyId();
+  el('weeklyBestTitle').textContent = '일일 랭킹 (' + dayId + ') · TOP 10';
+  database.ref(`leaderboards/weekly_${dayId}`)
     .orderByChild('time')
     .limitToFirst(10)
     .once('value', (snapshot) => {
